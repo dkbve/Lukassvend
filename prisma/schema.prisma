@@ -1,0 +1,93 @@
+// Prisma schema for Elektro Dokumentation
+// Note: SQLite does not support enums – role/type values are plain strings,
+// enforced at the application layer.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("INSTALLER") // "INSTALLER"
+  company      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  createdRecords Record[]   @relation("RecordCreatedBy")
+  updatedRecords Record[]   @relation("RecordUpdatedBy")
+  deletedRecords Record[]   @relation("RecordDeletedBy")
+  auditLogs      AuditLog[]
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  publicToken String   @unique @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  records   Record[]
+  auditLogs AuditLog[]
+}
+
+model Record {
+  id          String    @id @default(cuid())
+  unitId      String
+  title       String
+  description String
+  workAt      DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  createdById String
+  updatedAt   DateTime  @updatedAt
+  updatedById String?
+  deletedAt   DateTime?
+  deletedById String?
+
+  // Relations
+  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("RecordCreatedBy", fields: [createdById], references: [id])
+  updatedBy   User?        @relation("RecordUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy   User?        @relation("RecordDeletedBy", fields: [deletedById], references: [id])
+  attachments Attachment[]
+  auditLogs   AuditLog[]
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  recordId  String
+  type      String   // "IMAGE" | "FILE"
+  filename  String
+  mimeType  String
+  storedAs  String   // UUID-based filename on disk
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  // Relations
+  record Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "CREATE" | "UPDATE" | "DELETE"
+  recordId    String?
+  unitId      String
+  installerId String
+  timestamp   DateTime @default(now())
+  diffJson    String?  // JSON string of field-level changes
+
+  // Relations
+  record    Record? @relation(fields: [recordId], references: [id])
+  unit      Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  installer User    @relation(fields: [installerId], references: [id])
+}
