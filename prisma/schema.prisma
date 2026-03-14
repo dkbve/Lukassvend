@@ -1,14 +1,13 @@
 // Prisma schema for Elektro Dokumentation
-// Note: SQLite does not support enums – role/type values are plain strings,
-// enforced at the application layer.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
